@@ -1,0 +1,125 @@
+<html>
+  <head>
+    <title>Niger Delta Oil Spills</title>
+    <script src="polymaps.min.js"></script>
+ 
+    <style>
+      #map,
+      #map > svg {
+        display: block;
+        height: 100%;
+        width: 100%;
+      }
+    </style>
+  </head>
+  <body style="margin: 0; padding: 0; background: #000;">
+    <div id="map"></div>
+    <script>
+      var bingMapsKey = 'AmpVpZmvL-92GeoOTNQ92KfLKXf_Tz3tA7Q1C38q19Jmz9vmi6OmvCAEag3F0h9-';
+  
+      var po = org.polymaps;
+
+      var div = document.getElementById("map");
+
+      var map = po.map()
+          .container(div.appendChild(po.svg("svg")))
+          .add(po.interact())
+          .add(po.hash());
+
+      /*
+       * Load the "AerialWithLabels" metadata. "Aerial" and "Road" also work. For more
+       * information about the Imagery Metadata service, see
+       * http://msdn.microsoft.com/en-us/library/ff701716.aspx
+       * You should register for your own key at https://www.bingmapsportal.com/.
+       */
+      var script = document.createElement("script");
+      script.setAttribute("type", "text/javascript");
+      script.setAttribute("src", "http://dev.virtualearth.net"
+          + "/REST/V1/Imagery/Metadata/AerialWithLabels"
+          + "?key="+bingMapsKey
+          + "&jsonp=callback");
+      document.body.appendChild(script);
+
+      function callback(data) {
+
+        /* Display each resource as an image layer. */
+        var resourceSets = data.resourceSets;
+        for (var i = 0; i < resourceSets.length; i++) {
+          var resources = data.resourceSets[i].resources;
+          for (var j = 0; j < resources.length; j++) {
+            var resource = resources[j];
+            map.add(po.image()
+                .url(template(resource.imageUrl, resource.imageUrlSubdomains)))
+                .tileSize({x: resource.imageWidth, y: resource.imageHeight});
+          }
+        }
+
+//        map
+//        .center({lat: 5.3372289, lon: 6.6539534})
+//        .zoom(9)
+        
+      
+        map.add(po.geoJson()
+            .url('spills.json')
+            .on("load", load)
+            .clip(false)
+//           .scale("fixed")
+//        .zoom(10)
+          );
+/*
+        map
+        .center({lat: 37.787, lon: -122.228})
+          .zoom(12)
+*/
+        map
+        .center({lat: 5.0372289, lon: 6.3539534})
+        .zoom(9.3)
+      }
+
+      /* Post-process the GeoJSON points and replace them with markers! */
+      function load(e) {
+        var imageSize = 30,
+            imageOffset = -15;
+
+                        
+        for (var i = 0; i < e.features.length; i++) {
+          var f = e.features[i],
+              c = f.element,
+              g = f.element = po.svg("image");
+              
+          g.setAttributeNS(po.ns.xlink, "href", "icon.png?v"+Date().toString());
+          g.setAttribute("width", imageSize);
+          g.setAttribute("height", imageSize);
+          g.setAttribute("x", imageOffset);
+          g.setAttribute("y", imageOffset);
+          g.setAttribute("transform", c.getAttribute("transform"));
+
+          c.parentNode.replaceChild(g, c);
+        }
+      }
+      
+      /** Returns a Bing URL template given a string and a list of subdomains. */
+      function template(url, subdomains) {
+        var n = subdomains.length,
+            salt = ~~(Math.random() * n); // per-session salt
+
+        /** Returns the given coordinate formatted as a 'quadkey'. */
+        function quad(column, row, zoom) {
+          var key = "";
+          for (var i = 1; i <= zoom; i++) {
+            key += (((row >> zoom - i) & 1) << 1) | ((column >> zoom - i) & 1);
+          }
+          return key;
+        }
+
+        return function(c) {
+          var quadKey = quad(c.column, c.row, c.zoom),
+              server = Math.abs(salt + c.column + c.row + c.zoom) % n;
+          return url
+              .replace("{quadkey}", quadKey)
+              .replace("{subdomain}", subdomains[server]);
+        };
+      }
+    </script>
+  </body>
+</html>
