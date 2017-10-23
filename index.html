@@ -1,18 +1,74 @@
 <html>
   <head>
     <title>Niger Delta Oil Spills</title>
-    <script src="polymaps.min.js"></script>
- 
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha256-k2WSCIexGzOj3Euiig+TlR8gA0EmPjuc79OEeY5L45g=" crossorigin="anonymous"></script>
+    <script src="js/polymaps.min.js"></script> 
     <style>
+      body {
+        font-family: "Arial Narrow", "Helvetica Neue", Helvetica, Arial, sans-serif;
+      }
+      .header {
+        position: absolute;
+        display: block;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: auto;
+        background: rgba(0,0,0,0.7);
+        color: #fff;
+        padding: 0.25em 1em;
+        font-size: 1.8em;
+        line-height: 2em;
+        text-align: right;
+        text-transform: uppercase;
+      }
+      .logo {
+        position: absolute;
+        left: 0;
+        top: 0;
+      }
       #map,
       #map > svg {
         display: block;
         height: 100%;
         width: 100%;
       }
+      #map-legend {
+        position: absolute;
+        display: block;
+        bottom: 1em;
+        left: 1em;
+        height: auto;
+        width: 10em;
+        background: rgba(0,0,0,0.7);
+        color: #fff;
+        font-weight: bold;
+        padding: 0.5em 1em;
+        line-height: 2em;
+      }
+      label:hover {
+        cursor: pointer;
+      }
     </style>
   </head>
   <body style="margin: 0; padding: 0; background: #000;">
+    <div class="header"><img class="logo" src="img/logo.png"/> Niger Delta Oil Spills</div>
+    <div id="map-legend">
+      <div>
+        <input id="toggle-shell" type="checkbox" style="zoom: 1.5;" onClick="toggleCompany('shell')" checked/>
+        <label for="toggle-shell">
+          <div style="display: inline-block; height: 0.9em; width: 0.9em; margin-right: 0.25em; margin-left: 0.25em; border-radius: 1em; background: red;"></div>
+          Shell
+        </label>
+      </div>
+      <div>
+        <input id="toggle-eni" type="checkbox" style="zoom: 1.5;" onClick="toggleCompany('eni')" checked/>
+        <label for="toggle-eni">
+        <div style="display: inline-block; height: 0.9em; width: 0.9em; margin-right: 0.25em; margin-left: 0.25em; border-radius: 1em; background: yellow;"></div>
+        Eni
+        </label>
+      </div>
+    </div>
     <div id="map"></div>
     <script>
       var bingMapsKey = 'AmpVpZmvL-92GeoOTNQ92KfLKXf_Tz3tA7Q1C38q19Jmz9vmi6OmvCAEag3F0h9-';
@@ -40,64 +96,6 @@
           + "&jsonp=callback");
       document.body.appendChild(script);
 
-      function callback(data) {
-
-        /* Display each resource as an image layer. */
-        var resourceSets = data.resourceSets;
-        for (var i = 0; i < resourceSets.length; i++) {
-          var resources = data.resourceSets[i].resources;
-          for (var j = 0; j < resources.length; j++) {
-            var resource = resources[j];
-            map.add(po.image()
-                .url(template(resource.imageUrl, resource.imageUrlSubdomains)))
-                .tileSize({x: resource.imageWidth, y: resource.imageHeight});
-          }
-        }
-
-//        map
-//        .center({lat: 5.3372289, lon: 6.6539534})
-//        .zoom(9)
-        
-      
-        map.add(po.geoJson()
-            .url('spills.json')
-            .on("load", load)
-            .clip(false)
-//           .scale("fixed")
-//        .zoom(10)
-          );
-/*
-        map
-        .center({lat: 37.787, lon: -122.228})
-          .zoom(12)
-*/
-        map
-        .center({lat: 5.0372289, lon: 6.3539534})
-        .zoom(9.3)
-      }
-
-      /* Post-process the GeoJSON points and replace them with markers! */
-      function load(e) {
-        var imageSize = 30,
-            imageOffset = -15;
-
-                        
-        for (var i = 0; i < e.features.length; i++) {
-          var f = e.features[i],
-              c = f.element,
-              g = f.element = po.svg("image");
-              
-          g.setAttributeNS(po.ns.xlink, "href", "icon.png?v"+Date().toString());
-          g.setAttribute("width", imageSize);
-          g.setAttribute("height", imageSize);
-          g.setAttribute("x", imageOffset);
-          g.setAttribute("y", imageOffset);
-          g.setAttribute("transform", c.getAttribute("transform"));
-
-          c.parentNode.replaceChild(g, c);
-        }
-      }
-      
       /** Returns a Bing URL template given a string and a list of subdomains. */
       function template(url, subdomains) {
         var n = subdomains.length,
@@ -119,6 +117,105 @@
               .replace("{quadkey}", quadKey)
               .replace("{subdomain}", subdomains[server]);
         };
+      }
+      
+      function callback(data) {
+        /* Display each resource as an image layer. */
+        var resourceSets = data.resourceSets;
+        for (var i = 0; i < resourceSets.length; i++) {
+          var resources = data.resourceSets[i].resources;
+          for (var j = 0; j < resources.length; j++) {
+            var resource = resources[j];
+            map.add(po.image()
+                .url(template(resource.imageUrl, resource.imageUrlSubdomains)))
+                .tileSize({x: resource.imageWidth, y: resource.imageHeight});
+          }
+        }
+        
+        /*
+        map.add(
+          po.geoJson()
+          .features([{geometry: {coordinates: [5.0372289, 6.3539534], type: "Point"}}])
+          .on("load", overlay)
+          .clip(false)
+          //.scale("fixed")
+          .zoom(9)
+        );
+        */
+    
+        map.add(
+          po.geoJson()
+          .url('data/oil-spills.json')
+          .on("load", loadMapPoints)
+          .clip(false)
+          //.scale("fixed")
+          //.zoom(9)
+        );
+
+        map
+        .center({lat: 5.0372289, lon: 6.3539534})
+        .zoom(9.5);
+      }
+
+      function loadMapPoints(e) {
+        for (var i = 0; i < e.features.length; i++) {
+          var f = e.features[i],
+              c = f.element;
+
+          if (f.data.geometry.coordinates[0] == 0 && f.data.geometry.coordinates[1] == 0) {
+            c.style.display = 'none';
+            continue;
+          }
+
+            
+          c.setAttribute('data-company', f.data.properties.From);
+          c.style.strokeWidth = '10px';
+          c.style.r = '10';
+          
+          if (f.data.properties.From == 'shell') {
+            c.style.fill = 'rgba(255,0,0,0.7)';
+            c.style.stroke = 'rgba(255,0,0,0.2)';
+          } else if (f.data.properties.From == 'eni') {
+            c.style.fill = 'rgba(255,255,0,0.7)';
+            c.style.stroke = 'rgba(255,255,0,0.2)';
+          }
+          
+          /*
+          var g = f.element = po.svg("image"),
+              imageSize = 30,
+              imageOffset = -15;
+          g.setAttributeNS(po.ns.xlink, "href", "img/icon.png?v"+Date().toString());
+          g.setAttribute("width", imageSize);
+          g.setAttribute("height", imageSize);
+          g.setAttribute("x", imageOffset);
+          g.setAttribute("y", imageOffset);
+          g.setAttribute("transform", c.getAttribute("transform"));
+
+          c.parentNode.replaceChild(g, c);
+          */
+        }
+      }
+
+      function overlay(e) {
+        for (var i = 0; i < e.features.length; i++) {
+          var f = e.features[i],
+              c = f.element,
+              g = f.element = po.svg("image"),
+              imageSize = 100,
+              imageOffset = 0;
+          g.setAttributeNS(po.ns.xlink, "href", "img/niger-delta-oil-pipelines.png");
+          g.setAttribute("width", imageSize);
+          g.setAttribute("height", imageSize);
+          g.setAttribute("x", imageOffset);
+          g.setAttribute("y", imageOffset);
+          g.setAttribute("transform", c.getAttribute("transform"));
+
+          c.parentNode.replaceChild(g, c);
+        }
+      }
+
+      function toggleCompany(company) {
+        $('circle[data-company="'+company+'"]').toggle();
       }
     </script>
   </body>
